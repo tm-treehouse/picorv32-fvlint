@@ -8,6 +8,14 @@ core is possible with the [RISC-V Formal Verification
 Framework](https://github.com/YosysHQ/riscv-formal/). Please direct any
 questions to the [official YosysHQ Discourse](https://yosyshq.discourse.group).
 
+This fork: formal lint with fvlint
+==================================
+
+This fork adds [fvlint](https://github.com/tm-treehouse/fvlint) formal lint
+to PicoRV32 as an integration example. [fvlint/README.md](fvlint/README.md)
+covers what it checks, what it found and how it runs in CI
+([.github/workflows/fvlint.yml](.github/workflows/fvlint.yml)).
+
 PicoRV32 - A Size-Optimized RISC-V CPU
 ======================================
 

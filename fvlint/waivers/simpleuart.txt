@@ -1,0 +1,15 @@
+# SPDX-License-Identifier: ISC
+#
+# fvlint waivers for PicoSoC's UART.  These four checks end UNKNOWN: the
+# 32-bit divider counters are compared against a divider software can set to
+# anything, and they only wrap after 2^32 cycles, far past fvlint's bounded
+# search; PDR finds no invariant in its budget.
+
+# With cfg_divider = 32'hffffffff, `> cfg_divider` never holds, so the count
+# runs on and wraps: such a divider (43 s per bit at 100 MHz) is not usable.
+counter_overflow:recv_divcnt           # receive bit timer; wraps only with a divider of 32'hffffffff
+counter_overflow:recv_divcnt#1         # receive bit timer; wraps only with a divider of 32'hffffffff
+counter_overflow:recv_divcnt#2         # receive bit timer; wraps only with a divider of 32'hffffffff
+# The transmit counter also runs while idle and wraps after 2^32 idle cycles;
+# it is cleared before every byte, so that is harmless.
+counter_overflow:send_divcnt           # free-running while idle, cleared before every byte
