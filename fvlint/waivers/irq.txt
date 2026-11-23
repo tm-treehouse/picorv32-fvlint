@@ -1,0 +1,19 @@
+# SPDX-License-Identifier: ISC
+#
+# fvlint waivers for PicoRV32 with the interrupt controller (ENABLE_IRQ=1,
+# q registers, timer) and the single-port register file.  The environment
+# for this configuration is in ../assume/irq.sv.
+
+# full_case pragmas on signals the code first sets to 'x, so a cycle where no
+# item assigns them is a don't-care in simulation as well as in synthesis.
+full_case:alu_out_0                    # alu_out_0 = 'bx before the case
+full_case:alu_out_q                    # alu_out = 'bx before the case (alu_out_q registers alu_out)
+full_case:reg_out#1                    # reg_out <= 'bx at the top of the main always block
+full_case:reg_sh                       # reg_sh <= 'bx at the top of the main always block
+
+# Overlap in a cycle whose result is not used.
+parallel_case:alu_out_0                # instr_* and the registered is_* flags disagree for one cycle after decode (LD_RS1); alu_out_0 is used from EXEC on
+
+# Design intent.
+fsm_trap:cpu_state={8'b10000000}       # TRAP: the core halts (trap = 1) until reset, by design
+counter_overflow:count_instr           # 64-bit instruction counter: 2^64 instructions to wrap

@@ -1,0 +1,5 @@
+# SPDX-License-Identifier: ISC
+#
+# fvlint waivers for PicoSoC's SPI flash controller.
+
+counter_overflow:rd_addr               # sequential prefetch past 24'hfffffc wraps to 0, as the flash's own continuous read does; a request is served only if its address equals rd_addr

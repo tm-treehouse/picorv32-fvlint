@@ -1,0 +1,43 @@
+# SPDX-License-Identifier: ISC
+#
+# Formal lint with fvlint: small, local proofs about counters, case
+# statements, part-selects, memories and FSMs.  Runs in minutes, next to the
+# full ISA proofs in ci.yml (riscv-formal).
+name: fvlint
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  fvlint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        config: [default, irq, simpleuart, spimemio]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      # Native Yosys, SymbiYosys, solvers and ABC (for PDR).
+      - uses: YosysHQ/setup-oss-cad-suite@v4
+        with:
+          version: "2026-11-14"
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+      - run: pip install "fvlint @ git+https://github.com/tm-treehouse/fvlint@v0.3.2"
+      - run: fvlint/run.sh ${{ matrix.config }}
+      - name: Summary
+        if: always()
+        run: python fvlint/summary.py fvlint_out/${{ matrix.config }}/results.json >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: fvlint-${{ matrix.config }}
+          path: fvlint_out/${{ matrix.config }}
