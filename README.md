@@ -1,20 +1,84 @@
+[![fvlint](https://github.com/tm-treehouse/picorv32-fvlint/actions/workflows/fvlint.yml/badge.svg)](https://github.com/tm-treehouse/picorv32-fvlint/actions/workflows/fvlint.yml)
+
+fvlint showcase: formal lint on PicoRV32
+========================================
+
+This repository shows [fvlint](https://github.com/tm-treehouse/fvlint) at work on
+real, widely used RTL. fvlint is a lightweight formal lint tool: it finds the
+counters, `case` statements, part-selects, memories and state machines in a
+design and proves a small, local property about each one. Every check runs on
+its own slice of the design, so a whole CPU core is checked in minutes, and
+each finding points at the RTL line where something can go wrong.
+
+The design under test is [PicoRV32](#picorv32---a-size-optimized-risc-v-cpu)
+and two of its PicoSoC peripherals, unchanged from upstream. Everything
+fvlint-specific is in [fvlint/](fvlint/) and
+[.github/workflows/fvlint.yml](.github/workflows/fvlint.yml).
+
+### Quick start
+
+fvlint needs Python 3.11+, Yosys, SymbiYosys and an SMT solver; the
+[OSS CAD Suite](https://github.com/YosysHQ/oss-cad-suite-build) has them all.
+
+```sh
+pip install "fvlint @ git+https://github.com/tm-treehouse/fvlint@v0.3.2"
+fvlint/run.sh                  # every configuration
+fvlint/run.sh default irq      # just these
+```
+
+Results land in `fvlint_out/<config>/` (`results.json`, `junit.xml`, and a VCD
+for every counterexample). The script exits non-zero on any `FAIL`, `ERROR` or
+`VACUOUS` result that no waiver covers.
+
+### What gets checked
+
+| Config | Top | Covers | Checks | Waived |
+|---|---|---|---|---|
+| `default` | `picorv32` | the core as shipped | 74 | 15 |
+| `irq` | `picorv32` | IRQ controller, q registers, IRQ timer, single-port register file | 71 | 7 |
+| `simpleuart` | `simpleuart` | PicoSoC's UART | 6 | 4 |
+| `spimemio` | `spimemio` | PicoSoC's SPI flash controller | 3 | 1 |
+
+Every waiver was traced back to the RTL and is recorded, with its reason, in
+[fvlint/waivers/](fvlint/waivers/).
+
+### What fvlint found
+
+* **A real bug:** with `ENABLE_IRQ_QREGS`, the decoder doesn't check the upper
+  bits of the q-register field in `getq`/`setq`, so `setq q16, x0` writes
+  `cpuregs[48]` of a 36-entry register file. fvlint reports it as a failed
+  memory-address check with a counterexample trace.
+* **Logic the default parameters switch off**, such as the LD_RS2 state and the
+  IRQ timer, reported as unreachable or vacuous and then proven in the `irq`
+  configuration.
+* **Design intent made explicit:** the TRAP state, a wrapping prefetch address
+  in `spimemio`, and `full_case` statements whose signals are already `'x`.
+
+[fvlint/README.md](fvlint/README.md) walks through every finding, the
+configurations, and how the CI job works.
+
+### Relation to upstream and riscv-formal
+
+fvlint complements, rather than replaces, the
+[riscv-formal](https://github.com/YosysHQ/riscv-formal/) ISA proofs that
+upstream runs in `.github/workflows/ci.yml`: riscv-formal proves the core
+implements the RISC-V ISA, while fvlint knows nothing about the ISA and checks
+the structures the RTL is built from.
+
+The rest of this README is the upstream PicoRV32 documentation, kept unchanged
+for reference.
+
+---
+
+Upstream development status
+===========================
+
 [![.github/workflows/ci.yml](https://github.com/YosysHQ/picorv32/actions/workflows/ci.yml/badge.svg)](https://github.com/YosysHQ/picorv32/actions/workflows/ci.yml)
 
-Development status
-==================
-
-This project is no longer under active development.  Formal verification of the
+Upstream PicoRV32 is no longer under active development.  Formal verification of the
 core is possible with the [RISC-V Formal Verification
 Framework](https://github.com/YosysHQ/riscv-formal/). Please direct any
-questions to the [official YosysHQ Discourse](https://yosyshq.discourse.group).
-
-This fork: formal lint with fvlint
-==================================
-
-This fork adds [fvlint](https://github.com/tm-treehouse/fvlint) formal lint
-to PicoRV32 as an integration example. [fvlint/README.md](fvlint/README.md)
-covers what it checks, what it found and how it runs in CI
-([.github/workflows/fvlint.yml](.github/workflows/fvlint.yml)).
+questions about PicoRV32 itself to the [official YosysHQ Discourse](https://yosyshq.discourse.group).
 
 PicoRV32 - A Size-Optimized RISC-V CPU
 ======================================
@@ -101,6 +165,13 @@ Files in this Repository
 #### README.md
 
 You are reading it right now.
+
+#### fvlint/
+
+The fvlint showcase: `run.sh` runs fvlint on each configuration, `waivers/`
+holds the reviewed findings, `assume/` the environment for the `irq`
+configuration, and `summary.py` the CI job summary. See
+[fvlint/README.md](fvlint/README.md).
 
 #### picorv32.v
 
